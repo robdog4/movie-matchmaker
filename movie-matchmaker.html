@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Movie Matchmaker with Real Titles</title>
+  <style>
+    body {
+      background-color: #121212;
+      color: #eee;
+      font-family: sans-serif;
+      padding: 20px;
+      max-width: 800px;
+      margin: auto;
+    }
+    h1 {
+      text-align: center;
+    }
+    form {
+      background: #1e1e1e;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+    }
+    select, input {
+      width: 100%;
+      padding: 6px;
+      margin-top: 5px;
+      background: #2c2c2c;
+      color: #fff;
+      border: 1px solid #333;
+      border-radius: 5px;
+    }
+    button {
+      margin-top: 15px;
+      padding: 10px;
+      background: #4caf50;
+      border: none;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .result {
+      padding: 15px;
+      background: #2c2c2c;
+      border-radius: 5px;
+      margin-top: 20px;
+    }
+    ul {
+      list-style: none;
+      padding-left: 0;
+    }
+    li {
+      padding: 5px 0;
+    }
+  </style>
+</head>
+<body>
+
+<h1>🎥 Movie Matchmaker</h1>
+
+<form id="formA">
+  <h2>Person A</h2>
+  <label for="genresA">Favorite Genres</label>
+  <select id="genresA" multiple>
+    <option>Action</option><option>Comedy</option><option>Drama</option>
+    <option>Horror</option><option>Sci-Fi</option><option>Romance</option>
+    <option>Documentary</option><option>Animation</option>
+  </select>
+  <button type="submit">Save A's Preferences</button>
+</form>
+
+<form id="formB">
+  <h2>Person B</h2>
+  <label for="genresB">Favorite Genres</label>
+  <select id="genresB" multiple>
+    <option>Action</option><option>Comedy</option><option>Drama</option>
+    <option>Horror</option><option>Sci-Fi</option><option>Romance</option>
+    <option>Documentary</option><option>Animation</option>
+  </select>
+  <button type="submit">Save B's Preferences</button>
+</form>
+
+<button onclick="findMatch()">🎯 Find Movies You Both Like</button>
+
+<div class="result" id="matchResult"></div>
+
+<script>
+  const tmdbApiKey = 'robdog4.github.io'; // <- Replace this with your actual TMDB key
+
+  const genreMap = {
+    "Action": 28,
+    "Comedy": 35,
+    "Drama": 18,
+    "Horror": 27,
+    "Sci-Fi": 878,
+    "Romance": 10749,
+    "Documentary": 99,
+    "Animation": 16
+  };
+
+  document.getElementById('formA').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const genres = Array.from(document.getElementById('genresA').selectedOptions).map(opt => opt.value);
+    localStorage.setItem('moviePrefsA', JSON.stringify(genres));
+    alert("Preferences for A saved.");
+  });
+
+  document.getElementById('formB').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const genres = Array.from(document.getElementById('genresB').selectedOptions).map(opt => opt.value);
+    localStorage.setItem('moviePrefsB', JSON.stringify(genres));
+    alert("Preferences for B saved.");
+  });
+
+  async function findMatch() {
+    const aPrefs = JSON.parse(localStorage.getItem('moviePrefsA')) || [];
+    const bPrefs = JSON.parse(localStorage.getItem('moviePrefsB')) || [];
+    const shared = aPrefs.filter(genre => bPrefs.includes(genre));
+    const resultDiv = document.getElementById('matchResult');
+    resultDiv.innerHTML = '';
+
+    if (shared.length === 0) {
+      resultDiv.innerHTML = `😕 No common genres.`;
+      return;
+    }
+
+    const randomShared = shared[Math.floor(Math.random() * shared.length)];
+    const genreId = genreMap[randomShared];
+
+    resultDiv.innerHTML = `🎬 You both like <strong>${randomShared}</strong> movies. Finding suggestions...`;
+
+    try {
+      const res = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=${tmdbApiKey}&with_genres=${genreId}&sort_by=popularity.desc`);
+      const data = await res.json();
+      const movies = data.results.slice(0, 5); // top 5 results
+
+      const ul = document.createElement('ul');
+      movies.forEach(movie => {
+        const li = document.createElement('li');
+        li.textContent = `${movie.title} (${movie.release_date?.split('-')[0] || 'N/A'})`;
+        ul.appendChild(li);
+      });
+
+      resultDiv.innerHTML += "<h3>Top picks:</h3>";
+      resultDiv.appendChild(ul);
+    } catch (err) {
+      resultDiv.innerHTML += `<p style="color:red;">Failed to fetch movie suggestions.</p>`;
+      console.error(err);
+    }
+  }
+</script>
+
+</body>
+</html>
